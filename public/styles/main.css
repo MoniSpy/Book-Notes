@@ -1,0 +1,105 @@
+
+.spacer{
+    height: 50px;
+}
+
+#sorters a{
+    color: black;
+}
+
+a{
+    color:white;
+    text-decoration: none;
+}
+
+.buttons{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header{
+    display:flex;
+    flex-direction:column;
+    align-items: center;
+}
+
+figure{
+    justify-self: left;
+}
+
+
+.bookInfo{
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+}
+.bookImg{
+    height: 300px;
+    width: 200px;
+}
+
+.noImage{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+    width: 200px;
+}
+.noBookCover{
+    text-align: center;
+}
+
+
+/* MEDIA QUERIES */
+
+@media screen and (max-width: 1024px) {
+    html {
+        font-size: 14px;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    html {
+        font-size: 12px;
+    }
+    .bookImg{
+        width: 150px;
+        height: 225px;
+    }
+    .noImage{
+        width: 150px;
+        height: 225px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    html {
+        font-size: 10px;
+    }
+    .bookImg{
+        width: 100px;
+        height: 150px;
+    }
+    .noImage{
+        width: 100px;
+        height: 150px;
+    }
+}
+
+@media screen and (max-width: 440px) {
+    html {
+        font-size: 8px;
+    }
+    .bookImg{
+        width: 80px;
+        height: 120px;
+    }
+    .noImage{
+        width: 80px;
+        height: 120px;
+    }
+}

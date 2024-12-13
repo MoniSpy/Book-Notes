@@ -1,0 +1,140 @@
+<html lang="en">
+        <head>
+            <meta charset="utf-8">
+            <title>Notes | <%=book[0].title%></title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+            <link rel="stylesheet" href="/styles/main.css">
+        </head>
+        <style>
+            .spacer{
+                    height: 20px;
+                }
+                h1{
+                    text-align: center;
+                    font-weight: 700;
+                    /* font-size: 34px; */
+
+                }
+              
+                .note-wrapper {
+                    display: flex;
+                    flex-direction: column;
+                    width: 100%;
+                }
+
+                .icon{
+                    display: flex;
+                    flex-direction: row;
+                    justify-content: flex-end;
+                }
+                input[type=image]{
+                    height: 20px;
+                 }    
+        </style>
+        
+        <body>
+            <main>
+            <div class="container">
+                <div class="row">
+                    <div class="spacer"></div>
+                    <!-- Left column -->
+                    <div class="col-4 bookInfo">
+                        <!-- Book title -->
+                        <h1><%= book[0].title %></h1><br>
+                        <!-- Check if image_path is available -->
+                        <% if (book[0].image_path !== null) { %> 
+                            <figure><a href="https://www.amazon.co.uk/s?k=<%=book[0].isbn%>"><img  class="d-block mx-auto mb-4 bookImg" src="/<%=book[0].image_path%>"  loading=lazy alt="<%=book[0].title%>  - by <%=book[0].author%>"></a></figure>
+                        <% } else { %> 
+                            <!-- This is rendered if there is no image path-->
+                            <div class="noImage">
+                                <p class="noBookCover" >No book cover available</p>
+                            </div>
+                        <% } %>
+                        <!-- Book information -->
+                        <p class="lead mb-4">
+                            <strong>ISBN:</strong> <small> <%=book[0].isbn%></small><br>
+                            <strong>Author:</strong> <small> <%=book[0].author%></small><br>
+                            <strong>Date read:</strong> <small> <%=book[0].date_read%></small><br>
+                            <strong> My Rating:</strong> <small><%=book[0].rating%>/10</small><br>
+                        </p>
+                        <p>Go to the <strong><a style="color:black" href="https://www.amazon.co.uk/s?k=<%=book[0].isbn%>">Amazon page</a></strong></p>
+                        <div>
+                            <button class="btn btn-primary  px-4 gap-3" type="button" onclick="window.location.href='/'">Return to Main Page</button>
+                        </div>
+                    </div>
+                    <!-- Rigth column -->
+                    <div class="col-8"> 
+                        <h1> My Notes</h1>
+                        <div class="spacer"></div>
+                        <div class="spacer"></div>
+                        <div class="note-wrapper">
+                            <div class="spacer"></div>
+                            <div class="notepad">
+                            <% if (book[0].note !== null) { %> <!-- If the note property-->
+                                    <% for (let i=0; i<book.length; i++) { %> <!-- ...iterate through the note and render the data. -->
+                                        <ul style="list-style: none; padding: 0%;">
+                                            <li>
+                                                <div class="icon">
+                                                     <!-- Delete note. -->
+                                                    <form action="/notes/<%= book[i].id %>/delete" method="post">
+                                                        <input type="hidden" name="bookId" value="<%= book[i].book_id %>">
+                                                        <input type="image" id="delete<%= book[i].id %>" class="ed-icon" src="/assets/images/delete-icon.png" 
+                                                        onclick="return confirm('Are you sure you want to delete this note?')" alt="Delete" />
+                                                    </form>
+                                               
+                                                     <!-- Edit note. -->
+                                                     <input type="image" id="edit<%= book[i].id %>" class="ed-icon" src="/assets/images/edit-icon.png" 
+                                                     onclick="handler('<%= book[i].id %>')" alt="Edit" />
+                                                </div>
+                                                <!-- Render notes. -->
+                                                <div id="note<%= book[i].id %>" class="entry-text"><%- book[i].note %></div> 
+
+                                                <div>
+                                                    <!-- Update note-->
+                                                    <form class="form-group" action="/notes/<%= book[i].id %>/update" method="post">
+                                                        <input type="hidden" name="bookId" value="<%= book[i].book_id %>"> 
+                                                           <textarea class="form-control" id="input<%= book[i].id %>" class="review-input" name="noteToUpdate"
+                                                                autocomplete="off" autofocus="true" hidden="true"><%- book[i].note %></textarea>
+                                                            <br><br>
+                                                        <button id="done<%= book[i].id %>" class="btn btn-primary px-4 gap-3" type="submit" hidden>Done</button>
+                                                    </form>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    <% } %>
+                                <% } else { %> 
+                                    <!-- This is rendered if there are no notes. -->
+                                    <p>There are no notes yet.</p>
+                                <% } %>
+                            </div> 
+                            <!-- New note form -->
+                            <div>
+                                <form action="/notes/<%= book[0].book_id %>/add" method="post"> 
+                                    <div class=" form-group">
+                                        <textarea class="form-control" name="newNote" autocomplete="off" autofocus="true"></textarea>
+                                    </div><br>
+                                    <button class="btn btn-primary px-4 gap-3" type="submit">Add Note</button>
+                                </form>
+                            </div>
+                        </div>                 
+                    </div>
+                </div>
+                
+                <!-- JS script -->
+                <script>
+                    function handler(id) {
+                    document.getElementById("note" + id).setAttribute("hidden", true) // This hides the note text.
+                    document.getElementById("edit" + id).setAttribute("hidden", true) // This hides the edit button.
+                    document.getElementById("delete" + id).setAttribute("hidden", true) // This hides the delete button.
+                    document.getElementById("done" + id).removeAttribute("hidden") // This makes the done button visible.
+                    document.getElementById("input" + id).removeAttribute("hidden") // This makes the text area for editing notes visible.
+                    }
+                </script>
+                <!-- Bootstrap JS scripts   -->
+                <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+                <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+            </main>
+        </body>
+    </html>
