@@ -31,11 +31,11 @@ app.use(express.static("public"));
 
 
 //FUNCTIONS
-//Function Fecth and save book cover
+
+//Fecth and save book cover
 async function fetchSaveCover(isbn){
   //API url cover
   const url=`https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg`;
-  console.log(url);
   const fileName=isbn;
   const imagePath= `/public/assets/images/covers/${fileName}.jpg`;
   try {
@@ -45,18 +45,17 @@ async function fetchSaveCover(isbn){
     response.data.pipe(fileStream); 
     console.log(`Image saved: ${fileName}.jpg`);
   } catch (error) {
-    // Log any errors 
-    console.log("Error fetching or saving cover image: ", error); 
+    console.log("Error fetching or saving cover: ", error); 
   }
 }
 
-//Function Get all books from database
+// Get all books from database
 async function getAllBooks(){
   const books=await db.query("SELECT * FROM books;");
   return books.rows;
 }
 
-//Function Get date 
+//Get date 
 function getDate(date){
   let day = ("0" + date.getDate()).slice(-2);  //Get day
   let month = ("0" + (date.getMonth() + 1)).slice(-2);// get current month
@@ -65,21 +64,19 @@ function getDate(date){
   return shorter_Date;
 }
 
-// Function to fetch notes from database.
+// Fetch notes from database.
 async function fetchNotes(id) {
   try { 
-      // Make a database query selecting relevant columns.
-      // Use LEFT JOIN to combine data from the "books" and "notes" tables including notes if available.
+      // Database query selecting relevant columns.
       const result = await db.query(
-          'SELECT notes.id, notes.book_id, isbn, title, author, rating, image_path, date_read, notes.note FROM books LEFT JOIN notes ON books.id = notes.book_id WHERE books.id = $1 ORDER BY id DESC', [id]);
-         console.log(result.rows); 
+          'SELECT notes.id, notes.book_id, isbn, title, author, description,  rating, image_path, date_read, notes.note FROM books LEFT JOIN notes ON books.id = notes.book_id WHERE books.id = $1 ORDER BY notes.id DESC', [id]); 
           return result.rows;
   } catch (error) {
       console.error('Error fetching notes:', error);
   }
 }
 
-// Function to format data.
+// Format data.
 function formatData(data) {
   if (data[0].description || data[0].review || data[0].note) {
 
@@ -93,16 +90,19 @@ function formatData(data) {
             }
           // Format review
           if (item.review) {
+        
               item.review = item.review.replace(/<br>/g, '');
               if (item.review.includes('\n')) {
+                
                   item.review = item.review.split('\n').join('<br>');
               }
           }
-
           // Format note
           if (item.note) {
+            console.log("note");
               item.note = item.note.replace(/<br>/g, '');
               if (item.note.includes('\n')) {
+                console.log(" nested note");
                   item.note = item.note.split('\n').join('<br>');
               }
           }
@@ -110,28 +110,27 @@ function formatData(data) {
   } 
   return data;
 }
+
 //Function to delete isbn
 function deleteImage(isbn){
   var filePath = `/public/assets/images/covers/${isbn}.jpg`; 
   console.log(filePath);
-  fs.unlinkSync(_dirname+filePath);
+  //Delete file if exists 
+  try {
+    fs.unlinkSync(_dirname+filePath);
+  }
+  catch(err){
+    console.log(err);
+  }
 }
-
-
-// let books=[ 
-//     { id:1, title:"The Power of Now", author: "Edkart Tolle", description: "Write description here" ,image:" /assets/images/bookcove.png", rating:"10", isbn:"978-0340733509",date_read:"10-10-2024", notes: "Excellent book" ,  review:"https://www.amazon.co.uk/Power-Now-Guide-Spiritual-Enlightenment/dp/0340733500?ie=UTF8&tag=googhydr-21&hvadid=719417706401&hvpos=&hvexid=&hvnetw=g&hvrand=3511596892049618813&hvpone=&hvptwo=&hvqmt=&hvdev=c&ref=pd_sl_3fqcld3nnr_e&gad_source=1#customerReviews", image_path:"/assets/images/covers/978-0340733509.jpg"},
-//     { id:2, title:"That little voice in your head", author: "Mo Gawdat", description: "Write description here" ,image:"/assets/images/bookcove.png",rating:"10",isbn:"978-0340733509",date_read:"10-10-2024",notes: "I love it", review:"https://www.amazon.co.uk/That-Little-Voice-Your-Head/dp/1529066174/ref=tmm_pap_swatch_0?_encoding=UTF8&qid=&sr=#customerReviews",image_path:" " },
-//     // { id:3, title:"The Power of Now", author: "Edkart Tolle", description: "Write description here" ,image:"/assets/images/bookcove.png",rating:"10",isbn:"978-0340733509" ,date_read:"10-10-2024" },
-//     // { id:4, title:"That little voice in your head", author: "Mo Gawdat", description: "Write description here" ,image:"/assets/images/bookcove.png",rating:"10",isbn:"978-0340733509", date:"10-10-2024" },
-// ];
 
 
 //GET home page
 app.get("/", async (req, res) => {   
-  let books=await getAllBooks();
-      res.render("index.ejs", {books:books});
+  let result=await getAllBooks();
+  const formattedbooks=formatData(result);
+      res.render("index.ejs", {books:formattedbooks});
   });
-
 
 //ADD NEW BOOK
 //GET  new book form page
@@ -142,14 +141,14 @@ app.get("/", async (req, res) => {
 //POST request for new book.
 app.post("/newBook/add", async (req, res) => {
   const newEntry = req.body; // Request data from html form
-  const ISBN=newEntry.isbn;
-  fetchSaveCover(ISBN.trim()); // Pass ISBN trimed
-  const imagePath = `assets/images/covers/${newEntry.isbn}.jpg`; // Create a book cover image path for saving to database.
+  const ISBN=req.body.isbn.trim();
+  fetchSaveCover(ISBN); // Pass ISBN trimed
+  const imagePath = `assets/images/covers/${ISBN}.jpg`; // Create a book cover image path for saving to database.
   const timeStamp = getDate(new Date()); // Create timestamp for the log entry.
   try {
       // Save everything to database.
       await db.query('INSERT INTO books (isbn, title, author, description, rating, image_path, date_read, review) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-          [   newEntry.isbn,
+          [   ISBN,
               newEntry.title,
               newEntry.author,
               newEntry.description,
@@ -189,18 +188,20 @@ app.post('/books/:bookId/delete', async (req, res) => {
 //BOOK NOTES
 //GET route to display notes for a specific book.
 app.get('/notes/:bookId', async (req, res) => {
-  // request book id from html parmeters
+  // Request book id from html parmeters
   const bookId = req.params.bookId;
   console.log(bookId);
   try {
-      // Fetch notes for the specified book id.
+      //Fetch notes for the specified book id.
       const notes = await fetchNotes(bookId); 
-      console.log(notes);
-      // Format notes.
-      const formattedNotes = await formatData(notes); 
+      //Format notes.
+      const formattedNotes = formatData(notes); 
       console.log("formated note:"+JSON.stringify(formattedNotes,null,4));
       //Render notes
-      res.render('notes.ejs', { book: formattedNotes });
+      res.render('notes.ejs', { 
+        book: formattedNotes, 
+        bookId:bookId
+      });
     } catch (error) {
       console.log(error);
   }
@@ -212,7 +213,6 @@ app.post('/notes/:bookId/add', async (req, res) => {
   const bookId = req.params.bookId; 
   //Request new note content from html parametres
   const note = req.body.newNote;
-
   // Pass the note to server and save to database using the book id.
   try {
       await db.query('INSERT INTO notes (note, book_id) VALUES ($1, $2)', [note, bookId]);
@@ -228,7 +228,6 @@ app.post('/notes/:noteId/update', async (req, res) => {
   const updatedNote = req.body.noteToUpdate;
   const updateNoteId = req.params.noteId;
   const bookId = req.body.bookId;
-  
   // Pass note id, note and book id to server and query database to update the note.
   try {
       await db.query('UPDATE notes SET note = ($1) WHERE id = $2', [updatedNote, updateNoteId]);

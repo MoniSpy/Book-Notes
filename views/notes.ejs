@@ -31,10 +31,9 @@
                 input[type=image]{
                     height: 20px;
                  }    
-        </style>
-        
+        </style>   
         <body>
-            <main>
+          <main>
             <div class="container">
                 <div class="row">
                     <div class="spacer"></div>
@@ -71,6 +70,7 @@
                         <div class="note-wrapper">
                             <div class="spacer"></div>
                             <div class="notepad">
+                                <%console.log("book",book);%>
                             <% if (book[0].note !== null) { %> <!-- If the note property-->
                                     <% for (let i=0; i<book.length; i++) { %> <!-- ...iterate through the note and render the data. -->
                                         <ul style="list-style: none; padding: 0%;">
@@ -88,7 +88,7 @@
                                                      onclick="handler('<%= book[i].id %>')" alt="Edit" />
                                                 </div>
                                                 <!-- Render notes. -->
-                                                <div id="note<%= book[i].id %>" class="entry-text"><%- book[i].note %></div> 
+                                                <div id="note<%= book[i].id %>"><%-book[i].note %></div> 
 
                                                 <div>
                                                     <!-- Update note-->
@@ -97,7 +97,7 @@
                                                            <textarea class="form-control" id="input<%= book[i].id %>" class="review-input" name="noteToUpdate"
                                                                 autocomplete="off" autofocus="true" hidden="true"><%- book[i].note %></textarea>
                                                             <br><br>
-                                                        <button id="done<%= book[i].id %>" class="btn btn-primary px-4 gap-3" type="submit" hidden>Done</button>
+                                                        <button id="done<%= book[0].id %>" class="btn btn-primary px-4 gap-3" type="submit" hidden>Done</button>
                                                     </form>
                                                 </div>
                                             </li>
@@ -110,7 +110,7 @@
                             </div> 
                             <!-- New note form -->
                             <div>
-                                <form action="/notes/<%= book[0].book_id %>/add" method="post"> 
+                                <form action="/notes/<%=bookId%>/add" method="post"> 
                                     <div class=" form-group">
                                         <textarea class="form-control" name="newNote" autocomplete="off" autofocus="true"></textarea>
                                     </div><br>

@@ -30,13 +30,14 @@
                 <!-- Space div -->
                 <div class="spacer"></div>
                 <div class="row">  
+                <% if (books && books.length !== 0) { %> <!-- If books exists and books length is not 0... -->
+                    <% for (let i=0; i<books.length; i++) { %> <!-- ...iterate through books and render. -->
                     <!-- Render information for each book  -->
-                    <%books.forEach((book) =>{%>  
                         <!-- Left column -->
                         <div class="col-4 bookInfo">
                             <!-- Check if image_path is available -->
-                            <% if (book.image_path !== null) { %> 
-                                <figure><a href="https://www.amazon.co.uk/s?k=<%=book.isbn%>"><img  class="d-block mx-auto mb-4 bookImg" src="/<%=book.image_path%>"  loading=lazy alt="<%=book.title%>  - by <%=book.author%>"></a></figure>
+                            <% if (books[i].image_path !== null) { %> 
+                                <figure><a href="https://www.amazon.co.uk/s?k=<%=books[i].isbn%>"><img  class="d-block mx-auto mb-4 bookImg" src="/<%=books[i].image_path%>"  loading=lazy alt="<%=books[i].title%>  - by <%=books[i].author%>"></a></figure>
                             <% } else { %> 
                                 <!-- This is rendered if there is no image path-->
                                 <div class="noImage">
@@ -45,37 +46,40 @@
                             <% } %>
                             <!-- Book information -->
                             <p class="lead mb-4">
-                                <strong>ISBN:</strong> <small> <%=book.isbn%></small><br>
-                                <strong>Author:</strong> <small> <%=book.author%></small><br>
-                                <strong>Date read:</strong> <small> <%=book.date_read%></small><br>
-                                <strong> My Rating:</strong> <small><%=book.rating%>/10</small><br>
+                                <strong>ISBN:</strong> <small> <%=books[i].isbn%></small><br>
+                                <strong>Author:</strong> <small> <%=books[i].author%></small><br>
+                                <strong>Date read:</strong> <small> <%=books[i].date_read%></small><br>
+                                <strong> My Rating:</strong> <small><%=books[i].rating%>/10</small><br>
                             </p>
                             <!-- Buttons -->
                             <div class="buttons">
                                 <!-- Delete button -->
-                                <form action="/books/<%=book.id %>/delete" method="post">
+                                <form action="/books/<%=books[i].id %>/delete" method="post">
                                     <button type="submit" class="btn btn-primary btn-lg px-4 gap-3" onclick="return confirm('Are you sure you want to delete this book?')">Delete Book</button>
                                 </form>
                                 <br>
                                 <!-- Notes button -->
-                                <form action="/notes/<%=book.id%>" method="get">  
-                                    <button id="notes<%=book.id%>" type="submit" class="btn btn-primary btn-lg px-4 gap-3" >See my notes</button>
+                                <form action="/notes/<%=books[i].id%>" method="get">  
+                                    <button id="notes<%=books[i].id%>" type="submit" class="btn btn-primary btn-lg px-4 gap-3" >See my notes</button>
                                 </form>  
                             </div>
                         </div> 
                         <!-- Rigth column -->
                         <div class="col-8">
                                 <!-- Bokk title  -->
-                                <h2 class="display-6 fw-bold text-body-emphasis"><%=book.title%></h2><br>
+                                <h2 class="display-6 fw-bold text-body-emphasis"><%=books[i].title%></h2><br>
                                 <!-- Book Description -->
-                                <h2>Description:</h2><br><p class="lead mb-4" style="text-align:justify;"><%=book.description%></p>
+                                <h2>Description:</h2><br><p class="lead mb-4" style="text-align:justify;"><%-books[i].description%></p>
                                 <!-- My review -->
-                                <h2>My Review:</h2><br><p class="lead mb-4"  style="text-align:justify;"><%=book.review%></p>
+                                <h2>My Review:</h2><br><p class="lead mb-4"  style="text-align:justify;"><%-books[i].review%></p>
                         </div>
                     <div class="spacer"></div>
                     <hr>
                     <div class="spacer"></div>
-                <%})%>
+                     <%}%>
+                 <%} else{%>
+                    <p>Book data not available.</p>
+                 <%}%>
                 </div>  
                 <!-- Bootstrap JS scripts   -->
                 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
