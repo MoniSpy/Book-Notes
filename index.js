@@ -6,8 +6,10 @@ import fs from "fs";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 
-//Get the current directory path
+//Get the current directory path    
 const _dirname = dirname(fileURLToPath(import.meta.url));
+
+//Test coment
 
 //Iinitialise express, set port to 3000
 const app = express();
