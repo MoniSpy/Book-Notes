@@ -3,7 +3,20 @@
 -- password:123456! 
 
 -- Delete table if exits 
-DROP TABLE IF EXISTS books,notes;
+DROP TABLE IF EXISTS books,notes ,users;
+
+-- Create user tabel 
+CREATE TABLE users(
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  password VARCHAR(100),
+  first_name VARCHAR(100),
+  last_name VARCHAR(100)
+) 
+
+-- Insert sample data 
+INSERT INTO users (email, password, first_name, last_name) VALUES ('test1@gmail.com', '123456', 'Matt', 'Jones');
+INSERT INTO users (email, password, first_name, last_name) VALUES ('test2@gmail.com', '1234567', 'Moni', 'Spy');
 
 -- Create books table 
 CREATE TABLE books(
@@ -15,14 +28,8 @@ CREATE TABLE books(
   review TEXT,
   rating INT,
   image_path TEXT,
-  date_read TEXT
-);
-
--- Create notes tabel 
-CREATE TABLE notes(
-  id SERIAL PRIMARY KEY,
-  note TEXT,
-  book_id INT REFERENCES books(id)
+  date_read TEXT,
+  user_id INT REFERENCES users(id)
 );
 
 
@@ -66,6 +73,19 @@ Content here, content here, making it look like readable English. Many desktop p
 '10','29-01-2021')
 
 
+
+-- Create notes tabel 
+CREATE TABLE notes(
+  id SERIAL PRIMARY KEY,
+  note TEXT,
+  book_id INT REFERENCES books(id)
+);
+
+
+
+
+
+-- Insert sample data
 
 INSERT INTO notes(note, book_id)
 VALUES

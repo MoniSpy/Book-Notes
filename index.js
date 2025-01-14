@@ -5,6 +5,12 @@ import pg from "pg";
 import fs from "fs";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
+ // import bcrypt from "bcrypt";
+// import passport from "passport";
+// import { Strategy } from "passport-local";
+// import GoogleStrategy from "passport-google-oauth2";
+// import session from "express-session";
+// import env from "dotenv";
 
 //Get the current directory path    
 const _dirname = dirname(fileURLToPath(import.meta.url));
@@ -19,7 +25,7 @@ const port = 3000;
 const db = new pg.Client({
     user: "postgres",
     host: "localhost",
-    database: "books2",
+    database: "book",
     password: "123456!",
     port: 5432,
   });
@@ -129,10 +135,14 @@ function deleteImage(isbn){
 
 //GET home page
 app.get("/", async (req, res) => {   
-  let result=await getAllBooks();
-  const formattedbooks=formatData(result);
-      res.render("index.ejs", {books:formattedbooks});
+      res.render("home.ejs");
   });
+
+app.get("/books", async (req, res) => {   
+    let result=await getAllBooks();
+    const formattedbooks=formatData(result);
+        res.render("index.ejs", {books:formattedbooks});
+    });
 
 //ADD NEW BOOK
 //GET  new book form page

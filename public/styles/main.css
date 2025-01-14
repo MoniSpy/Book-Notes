@@ -1,3 +1,20 @@
+/* New home */
+body {
+    /* shows at the bottom of page */
+    /* background-color: #E8ECEF;  */
+    background-color: #E8ECEF;
+  }
+  
+.centered{
+    /* padding-top: 200px; */
+    text-align: center;
+}
+
+.login{
+    text-align: right;
+}
+
+
 
 .spacer{
     height: 50px;
