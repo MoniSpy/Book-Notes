@@ -179,7 +179,8 @@ app.post("/register", async (req,res) => {
     if (checkResult.rows.length>0){
       res.send("Email already exist. Try logging in");
     } else {
-      const result= await db.query("INSERT INTO users (email, password, first_name,  last_name)  VALUES ($1, $2, $3, $4) RETURNING *", 
+      const result= await db.query(
+        "INSERT INTO users (email, password, first_name,  last_name)  VALUES ($1, $2, $3, $4) RETURNING *", 
           [email, password, fName, lName]);
           console.log(result.rows[0]);
           res.redirect("/books");
@@ -194,19 +195,25 @@ app.post("/login", async (req, res) => {
   const email=req.body.username;
   const password=req.body.password;
   try{
-    //query users password from db
+    //Query user's password from db
     const checkResult= await db.query("SELECT * FROM users WHERE email=$1", 
       [email]
     );
-    const checkedPassword=checkResult.rows[0].password;
-    //Check if password matches
-    if(checkedPassword===password){
-      let result=await getAllBooks();
-      const formattedbooks=formatData(result);
-      res.render("index.ejs", {books:formattedbooks});
-    } else {
-      res.send("Incorrect Password")
-     }
+    if (checkResult.rows.length>0){
+      const user=checkResult.rows[0];
+      const storedPassword=user.password;
+
+       //Check if password matches
+      if(storedPassword===password){
+        let result=await getAllBooks();
+        const formattedbooks=formatData(result);
+        res.render("index.ejs", {books:formattedbooks});
+      } else {
+        res.send("Incorrect password");
+      }
+    }else {
+        res.send("User not found");
+    }   
     } catch(err){
       console.log(err);
     }
