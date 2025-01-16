@@ -5,12 +5,13 @@ import pg from "pg";
 import fs from "fs";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
+import env from "dotenv";
 import bcrypt from "bcrypt";
 // import passport from "passport";
 // import { Strategy } from "passport-local";
 // import GoogleStrategy from "passport-google-oauth2";
 // import session from "express-session";
-import env from "dotenv";
+
 
 //Get the current directory path    
 const _dirname = dirname(fileURLToPath(import.meta.url));
@@ -21,6 +22,7 @@ const _dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = 3000;
 
+//Numer of rounds to Hash 
 const saltRounds = 10;
 
 env.config();
@@ -179,11 +181,20 @@ app.post("/register", async (req,res) => {
     if (checkResult.rows.length>0){
       res.send("Email already exist. Try logging in");
     } else {
-      const result= await db.query(
-        "INSERT INTO users (email, password, first_name,  last_name)  VALUES ($1, $2, $3, $4) RETURNING *", 
-          [email, password, fName, lName]);
+      //Password Hashing with 10 rounds of salt using bcrypt
+      bcrypt.hash(password,saltRounds, async (err, hash) => {
+        if (err){
+          console.log("Error hashing password", err);
+        }else{
+          const result= await db.query(
+            "INSERT INTO users (email, password, first_name,  last_name)  VALUES ($1, $2, $3, $4) RETURNING *", 
+            [email, hash, fName, lName]
+          );
           console.log(result.rows[0]);
           res.redirect("/books");
+        }
+      })
+     
       }
   } catch(err) {
     console.log(err);
