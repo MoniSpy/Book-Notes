@@ -7,16 +7,16 @@ import { dirname } from "path";
 import { fileURLToPath } from "url";
 import env from "dotenv";
 import bcrypt from "bcrypt";
-// import passport from "passport";
-// import { Strategy } from "passport-local";
+import session from "express-session";
+import passport from "passport";
+import { Strategy } from "passport-local";
 // import GoogleStrategy from "passport-google-oauth2";
-// import session from "express-session";
+
 
 
 //Get the current directory path    
 const _dirname = dirname(fileURLToPath(import.meta.url));
 
-//Test coment
 
 //Iinitialise express, set port to 3000
 const app = express();
@@ -43,6 +43,21 @@ db.connect();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
+//set up a new session to start saving user login sessions 
+app.use(session({
+  //secret used to sign the session cookie
+  secret:process.env.SESSION_SECRET,
+  resave:false,
+  saveUninitialized:true,
+  cookie:{
+    //timeout for cookie 
+    maxAge:1000*60*60*24,
+     }
+  })
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 //FUNCTIONS
 
@@ -148,11 +163,19 @@ app.get("/", async (req, res) => {
       res.render("home.ejs");
   });
 
-app.get("/books", async (req, res) => {   
-
-    let result=await getAllBooks();
-    const formattedbooks=formatData(result);
+app.get("/notebook", async (req, res) => {   
+    //User deatils returned from passport strategy 
+    console.log(req.user);
+    //Passport function to determine fs the current user is authenticated
+      if (req.isAuthenticated()){
+        //if current user is authenticated 
+        let result=await getAllBooks();
+        const formattedbooks=formatData(result);
         res.render("index.ejs", {books:formattedbooks});
+      }else {
+        //If not authenticated redirect to login 
+        res.redirect("/login");
+      }
     });
 
 //Login route
@@ -191,7 +214,7 @@ app.post("/register", async (req,res) => {
             [email, hash, fName, lName]
           );
           console.log(result.rows[0]);
-          res.redirect("/books");
+          res.redirect("/notebook");
         }
       })
      
@@ -202,42 +225,44 @@ app.post("/register", async (req,res) => {
 });
 
 //Login POST route
-app.post("/login", async (req, res) => {
-  const email=req.body.username;
-  const loginPassword=req.body.password;
-  try{
-    //Query user's password from db
-    const checkResult= await db.query("SELECT * FROM users WHERE email=$1", 
-      [email]
-    );
-    //Check if user is registered
-    if (checkResult.rows.length>0){
-      const user=checkResult.rows[0];
-      const storedHashedPassword=user.password;
+app.post("/login", passport.authenticate("local",{
+  successRedirect:"/notebook",
+  failureRedirect:"/login",
 
-       //Check if passwords match using bcrypt 
-       bcrypt.compare(loginPassword,storedHashedPassword, async (err ,result) => {
-        if (err){
-          console.log("Error comparing passwords:", err);
-        }else{
-          console.log(result);
-          if (result){
-            let result=await getAllBooks();
-            const formattedbooks=formatData(result);
-            res.render("index.ejs", {books:formattedbooks});
-          }else{
-            res.send("Incorrect password");
+}));
+
+//Register a strategy on passport to verify user using username and password
+//This function authomatically grabs the username and password from the html name atribute in the loging and register pages
+passport.use(new Strategy(async function verify(username, password, cb){
+  console.log(username,password);
+  try {
+    const result = await db.query("SELECT * FROM users WHERE email = $1", [
+      username,
+    ]);
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      const storedHashedPassword = user.password;
+      bcrypt.compare(password, storedHashedPassword, (err, result) => {
+        if (err) {
+          return cb(err);
+          console.error("Error comparing passwords:", err);
+        } else {
+          if (result) {
+            return cb(null, user)
+            
+          } else {
+            return cb(null,false);
           }
         }
-       });
-    }else {
-        res.send("User not found");
-    }   
-  } catch(err){
-      console.log(err);
- }
-});
-
+      });
+    } else {
+      return cb("User not found");
+    }
+  } catch (err) {
+     return cb(err);
+  }
+}
+));
 
 //ADD NEW BOOK
 //GET  new book form page
@@ -389,6 +414,18 @@ app.get("/book" ,async (req,res)=>{
       console.log(error);
   }
 
+});
+
+
+//Save data of user who is logged in to local storage 
+//Use call back to pass over any of the details of the user
+passport.serializeUser((user, cb)=>{
+  cb(null,user);
+});
+
+//Enables to acces the user information that is saved 
+passport.deserializeUser((user,cb)=>{
+  cb(null,user);
 });
 
 //SET UP PORT
