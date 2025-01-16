@@ -5,12 +5,12 @@ import pg from "pg";
 import fs from "fs";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
- // import bcrypt from "bcrypt";
+import bcrypt from "bcrypt";
 // import passport from "passport";
 // import { Strategy } from "passport-local";
 // import GoogleStrategy from "passport-google-oauth2";
 // import session from "express-session";
-// import env from "dotenv";
+import env from "dotenv";
 
 //Get the current directory path    
 const _dirname = dirname(fileURLToPath(import.meta.url));
@@ -21,13 +21,17 @@ const _dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = 3000;
 
+const saltRounds = 10;
+
+env.config();
+
 // New client set up
 const db = new pg.Client({
-    user: "postgres",
-    host: "localhost",
-    database: "book",
-    password: "123456!",
-    port: 5432,
+    user: process.env.PG_USER,
+    host: process.env.PG_HOST,
+    database: process.env.PG_DATABASE,
+    password: process.env.PG_PASSWORD,
+    port: process.env.PG_PORT,
   });
 
 // Conect to database
@@ -59,8 +63,13 @@ async function fetchSaveCover(isbn){
 
 // Get all books from database
 async function getAllBooks(){
-  const books=await db.query("SELECT * FROM books;");
-  return books.rows;
+  try{
+    const books=await db.query("SELECT * FROM books;");
+    return books.rows;
+  } catch(err){
+    console.log(err);
+  }
+  
 }
 
 //Get date 
@@ -132,17 +141,77 @@ function deleteImage(isbn){
   }
 }
 
-
 //GET home page
 app.get("/", async (req, res) => {   
       res.render("home.ejs");
   });
 
 app.get("/books", async (req, res) => {   
+
     let result=await getAllBooks();
     const formattedbooks=formatData(result);
         res.render("index.ejs", {books:formattedbooks});
     });
+
+//Login route
+app.get("/login", (req,res) =>{
+  res.render("login.ejs")
+});
+
+//Register route
+app.get("/register",(req,res) =>{
+  res.render("register.ejs");
+
+});
+
+//Register POST route
+app.post("/register", async (req,res) => {
+  const email = req.body.username;
+  const password = req.body.password;
+  const fName=req.body.firstName;
+  const lName=req.body.lastName;
+  try{
+    //Query users email from db
+    const checkResult= await db.query("SELECT * FROM users WHERE email=$1", 
+      [email]
+    );
+     //If user does not exists save data in db
+    if (checkResult.rows.length>0){
+      res.send("Email already exist. Try logging in");
+    } else {
+      const result= await db.query("INSERT INTO users (email, password, first_name,  last_name)  VALUES ($1, $2, $3, $4) RETURNING *", 
+          [email, password, fName, lName]);
+          console.log(result.rows[0]);
+          res.redirect("/books");
+      }
+  } catch(err) {
+    console.log(err);
+  }
+});
+
+//Login POST route
+app.post("/login", async (req, res) => {
+  const email=req.body.username;
+  const password=req.body.password;
+  try{
+    //query users password from db
+    const checkResult= await db.query("SELECT * FROM users WHERE email=$1", 
+      [email]
+    );
+    const checkedPassword=checkResult.rows[0].password;
+    //Check if password matches
+    if(checkedPassword===password){
+      let result=await getAllBooks();
+      const formattedbooks=formatData(result);
+      res.render("index.ejs", {books:formattedbooks});
+    } else {
+      res.send("Incorrect Password")
+     }
+    } catch(err){
+      console.log(err);
+    }
+});
+
 
 //ADD NEW BOOK
 //GET  new book form page
