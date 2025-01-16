@@ -204,30 +204,38 @@ app.post("/register", async (req,res) => {
 //Login POST route
 app.post("/login", async (req, res) => {
   const email=req.body.username;
-  const password=req.body.password;
+  const loginPassword=req.body.password;
   try{
     //Query user's password from db
     const checkResult= await db.query("SELECT * FROM users WHERE email=$1", 
       [email]
     );
+    //Check if user is registered
     if (checkResult.rows.length>0){
       const user=checkResult.rows[0];
-      const storedPassword=user.password;
+      const storedHashedPassword=user.password;
 
-       //Check if password matches
-      if(storedPassword===password){
-        let result=await getAllBooks();
-        const formattedbooks=formatData(result);
-        res.render("index.ejs", {books:formattedbooks});
-      } else {
-        res.send("Incorrect password");
-      }
+       //Check if passwords match using bcrypt 
+       bcrypt.compare(loginPassword,storedHashedPassword, async (err ,result) => {
+        if (err){
+          console.log("Error comparing passwords:", err);
+        }else{
+          console.log(result);
+          if (result){
+            let result=await getAllBooks();
+            const formattedbooks=formatData(result);
+            res.render("index.ejs", {books:formattedbooks});
+          }else{
+            res.send("Incorrect password");
+          }
+        }
+       });
     }else {
         res.send("User not found");
     }   
-    } catch(err){
+  } catch(err){
       console.log(err);
-    }
+ }
 });
 
 
