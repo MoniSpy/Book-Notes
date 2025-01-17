@@ -79,9 +79,13 @@ async function fetchSaveCover(isbn){
 }
 
 // Get all books from database
-async function getAllBooks(){
+async function getAllBooks(currentUserEmail){
   try{
-    const books=await db.query("SELECT * FROM books;");
+    const books=await db.query('SELECT books.id,isbn,title,author,description, review, rating, image_path, date_read, user_id, email, first_name, last_name FROM books LEFT JOIN users ON books.user_id=users.id WHERE users.email=$1', 
+      [currentUserEmail]);
+   
+      // const books=await db.query('SELECT books.id,isbn,title,author,description, review, rating, image_path, date_read, user_id, email, first_name, last_name FROM books LEFT JOIN users ON books.user_id=users.id');
+    //  'SELECT notes.id, notes.book_id, isbn, title, author, description,  rating, image_path, date_read, notes.note FROM books LEFT JOIN notes ON books.id = notes.book_id WHERE books.id = $1 ORDER BY notes.id DESC'
     return books.rows;
   } catch(err){
     console.log(err);
@@ -164,14 +168,24 @@ app.get("/", async (req, res) => {
   });
 
 app.get("/notebook", async (req, res) => {   
+    const currentUserEmail=req.user.email;
+    console.log(currentUserEmail);
+    const currentUser=req.user;
     //User deatils returned from passport strategy 
     console.log(req.user);
     //Passport function to determine fs the current user is authenticated
       if (req.isAuthenticated()){
         //if current user is authenticated 
-        let result=await getAllBooks();
-        const formattedbooks=formatData(result);
-        res.render("index.ejs", {books:formattedbooks});
+       
+        let result=await getAllBooks(currentUserEmail);
+        console.log(result.length);
+        if (result.length>0){
+          const formattedbooks=formatData(result);
+        res.render("index.ejs", {books:formattedbooks, user:currentUser});
+        }else{
+        res.render("add.ejs", {user:currentUser});
+        }
+        
       }else {
         //If not authenticated redirect to login 
         res.redirect("/login");
@@ -209,12 +223,18 @@ app.post("/register", async (req,res) => {
         if (err){
           console.log("Error hashing password", err);
         }else{
+          console.log("Hashed password:", hash)
           const result= await db.query(
             "INSERT INTO users (email, password, first_name,  last_name)  VALUES ($1, $2, $3, $4) RETURNING *", 
             [email, hash, fName, lName]
           );
+          const user=result.rows[0];
           console.log(result.rows[0]);
-          res.redirect("/notebook");
+          req.login(user, (err) => {
+            console.log(err);
+            res.redirect("/notebook");
+          })
+          
         }
       })
      
@@ -272,14 +292,18 @@ passport.use(new Strategy(async function verify(username, password, cb){
 
 //POST request for new book.
 app.post("/newBook/add", async (req, res) => {
+  console.log("Adding book");
+  const currentUserId=req.user.id;
+  console.log(currentUserId);
   const newEntry = req.body; // Request data from html form
   const ISBN=req.body.isbn.trim();
   fetchSaveCover(ISBN); // Pass ISBN trimed
   const imagePath = `assets/images/covers/${ISBN}.jpg`; // Create a book cover image path for saving to database.
   const timeStamp = getDate(new Date()); // Create timestamp for the log entry.
+ 
   try {
       // Save everything to database.
-      await db.query('INSERT INTO books (isbn, title, author, description, rating, image_path, date_read, review) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+      await db.query('INSERT INTO books (isbn, title, author, description, rating, image_path, date_read, review, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
           [   ISBN,
               newEntry.title,
               newEntry.author,
@@ -287,7 +311,8 @@ app.post("/newBook/add", async (req, res) => {
               newEntry.rating,
               imagePath,
               timeStamp,
-              newEntry.review
+              newEntry.review,
+              currentUserId
           ]);
       //Redirect to the home page
       res.redirect('/')
