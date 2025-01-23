@@ -2,7 +2,7 @@ import express from "express";
 import axios from "axios";
 import bodyParser from "body-parser";
 import pg from "pg";
-import fs from "fs";
+import fs, { access } from "fs";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import env from "dotenv";
@@ -10,7 +10,7 @@ import bcrypt from "bcrypt";
 import session from "express-session";
 import passport from "passport";
 import { Strategy } from "passport-local";
-// import GoogleStrategy from "passport-google-oauth2";
+import GoogleStrategy from "passport-google-oauth2";
 
 
 
@@ -103,11 +103,13 @@ function getDate(date){
 }
 
 // Fetch notes from database.
-async function fetchNotes(id) {
+async function fetchNotes(bookId) {
   try { 
       // Database query selecting relevant columns.
       const result = await db.query(
-          'SELECT notes.id, notes.book_id, isbn, title, author, description,  rating, image_path, date_read, notes.note FROM books LEFT JOIN notes ON books.id = notes.book_id WHERE books.id = $1 ORDER BY notes.id DESC', [id]); 
+          'SELECT notes.id, notes.book_id, isbn, title, author, description,  rating, image_path, date_read, notes.note FROM books LEFT JOIN notes ON books.id = notes.book_id WHERE books.id = $1 ORDER BY notes.id DESC', 
+          [bookId]
+        );
           return result.rows;
   } catch (error) {
       console.error('Error fetching notes:', error);
@@ -202,6 +204,27 @@ app.get("/register",(req,res) =>{
   res.render("register.ejs");
 
 });
+//Authentication with google
+app.get(
+  "/auth/google", 
+  passport .authenticate("google", {
+    scope:["profile","email"],
+  })
+);
+
+//Google strategy call back URL
+app.get ("/auth/google/notebook", passport.authenticate("google", {
+  successRedirect:"/notebook",
+  failureRedirect:"/login",
+
+}));
+
+//Login POST route
+app.post("/login", passport.authenticate("local",{
+  successRedirect:"/notebook",
+  failureRedirect:"/login",
+
+}));
 
 //Register POST route
 app.post("/register", async (req,res) => {
@@ -244,45 +267,9 @@ app.post("/register", async (req,res) => {
   }
 });
 
-//Login POST route
-app.post("/login", passport.authenticate("local",{
-  successRedirect:"/notebook",
-  failureRedirect:"/login",
 
-}));
 
-//Register a strategy on passport to verify user using username and password
-//This function authomatically grabs the username and password from the html name atribute in the loging and register pages
-passport.use(new Strategy(async function verify(username, password, cb){
-  console.log(username,password);
-  try {
-    const result = await db.query("SELECT * FROM users WHERE email = $1", [
-      username,
-    ]);
-    if (result.rows.length > 0) {
-      const user = result.rows[0];
-      const storedHashedPassword = user.password;
-      bcrypt.compare(password, storedHashedPassword, (err, result) => {
-        if (err) {
-          return cb(err);
-          console.error("Error comparing passwords:", err);
-        } else {
-          if (result) {
-            return cb(null, user)
-            
-          } else {
-            return cb(null,false);
-          }
-        }
-      });
-    } else {
-      return cb("User not found");
-    }
-  } catch (err) {
-     return cb(err);
-  }
-}
-));
+
 
 //ADD NEW BOOK
 //GET  new book form page
@@ -315,7 +302,8 @@ app.post("/newBook/add", async (req, res) => {
               currentUserId
           ]);
       //Redirect to the home page
-      res.redirect('/')
+      console.log("Redirecting to home page");
+      res.redirect('/notebook')
   } catch (error) {
       console.log(error);
   }
@@ -348,6 +336,7 @@ app.get('/notes/:bookId', async (req, res) => {
   // Request book id from html parmeters
   const bookId = req.params.bookId;
   console.log(bookId);
+ 
   try {
       //Fetch notes for the specified book id.
       const notes = await fetchNotes(bookId); 
@@ -441,6 +430,74 @@ app.get("/book" ,async (req,res)=>{
 
 });
 
+
+
+//Register a strategy on passport to verify user using username and password
+//This function authomatically grabs the username and password from the html name atribute in the loging and register pages
+passport.use("local",
+  new Strategy(async function verify(username, password, cb){
+  console.log(username,password);
+  try {
+    const result = await db.query("SELECT * FROM users WHERE email = $1", [
+      username,
+    ]);
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      const storedHashedPassword = user.password;
+      bcrypt.compare(password, storedHashedPassword, (err, result) => {
+        if (err) {
+          return cb(err);
+          console.error("Error comparing passwords:", err);
+        } else {
+          if (result) {
+            return cb(null, user)
+            
+          } else {
+            return cb(null,false);
+          }
+        }
+      });
+    } else {
+      return cb("User not found");
+    }
+  } catch (err) {
+     return cb(err);
+  }
+}
+));
+
+passport.use("google",
+    new GoogleStrategy ({
+      clientID:process.env.GOOGLE_CLIENT_ID,
+      clientSecret:process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL:"http://localhost:3000/auth/google/notebook",
+      userProfileURL:"https://www.googleapis.com/oauth2/v3/userinfo",
+    }, async(accessTocken, refreshTocken, profile, cb) =>{
+      console.log(profile);
+      try {
+        console.log("Querying db for current user existance");
+        const result=await db.query("SELECT * FROM users WHERE email = $1" ,
+          [profile.email]);
+          if (result.rows.length===0) {
+             console.log("Check if user exists");
+            //User password is stored as "google", to identify users who have registered using google strategy instead of local strategy
+            const newUser=await db.query(
+              "INSERT INTO users (email, password, first_name, last_name) VALUES ($1, $2, $3, $4) RETURNING *", 
+              [profile.email, "google", profile.given_name, profile.family_name]
+            );
+            cb(null, newUser.rows[0]);
+          } else {
+            // Already have the existing user
+            // Tap into result.rows to grab existing user
+            cb(null, result.rows[0]);
+          }
+      } catch(err) {
+        // Use call back to pass error
+        cb(err);
+      }
+    } 
+  )
+ );
 
 //Save data of user who is logged in to local storage 
 //Use call back to pass over any of the details of the user
