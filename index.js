@@ -199,6 +199,11 @@ app.get("/login", (req,res) =>{
   res.render("login.ejs")
 });
 
+//log out
+app.get("/logout", (req,res) => {
+  res.redirect("/");
+});
+
 //Register route
 app.get("/register",(req,res) =>{
   res.render("register.ejs");
@@ -324,7 +329,7 @@ app.post('/books/:bookId/delete', async (req, res) => {
     //Delete book from database
      await db.query('DELETE FROM books WHERE id = $1', [deleteBookId]);
      //Redirect homepage
-     res.redirect('/');
+     res.redirect('/notebook');
   } catch (error) {
      console.log(error);
   }
@@ -400,6 +405,9 @@ app.post('/notes/:noteId/delete', async (req, res) => {
 //BOOK SORTERS
 //Sort books by title, rating or date read
 app.get("/book" ,async (req,res)=>{
+  let currentUser=req.user;
+  let currentUserId=currentUser.id;
+
   const currentSortOption = req.query.sort; 
   let result = null;
 
@@ -408,28 +416,33 @@ app.get("/book" ,async (req,res)=>{
       if (currentSortOption === undefined || currentSortOption === 'title') {
         console.log("sorting by title");
           result = await db.query(
-              'SELECT * FROM books ORDER BY title ASC');
+              'SELECT * FROM books WHERE user_id=$1 ORDER BY title ASC',
+            [currentUserId]
+          );
       }
       else if (currentSortOption === 'date') {
           result = await db.query(
-              'SELECT * FROM books ORDER BY date_read DESC');
+              'SELECT * FROM books WHERE user_id=$1 ORDER BY date_read DESC',  
+              [currentUserId]
+            );
       }
       else if (currentSortOption === 'rating') {
           result = await db.query(
-              'SELECT * FROM books ORDER BY rating DESC');
+              'SELECT * FROM books WHERE user_id=$1 ORDER BY rating DESC',  
+              [currentUserId]
+            );
       }
       
       // Format the book details, replacing newline characters with <br> tags.
       const formattedDetails = formatData(result.rows); 
      
       // Render home page with sorted date 
-      res.render('index.ejs', { books: formattedDetails, sortOption: currentSortOption }); 
+      res.render('index.ejs', { books: formattedDetails, sortOption: currentSortOption, user:currentUser }); 
   } catch (error) {
       console.log(error);
   }
 
 });
-
 
 
 //Register a strategy on passport to verify user using username and password

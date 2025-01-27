@@ -1,6 +1,5 @@
 -- Create a databases in postgres
--- name:books
--- password:123456! 
+
 
 -- Delete table if exits 
 DROP TABLE IF EXISTS books,notes ,users;
