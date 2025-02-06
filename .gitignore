@@ -1,5 +1,6 @@
 #Project files
 .DS_Store
+./public/images/covers
 # Logs
 logs
 *.log
